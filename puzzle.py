@@ -2,7 +2,6 @@ import heapq
 import math
 import time
 import itertools
-from collections import namedtuple
 from dataclasses import dataclass, field
 
 # A state is a flat tuple of 9 ints, row by row. 0 is the blank.
@@ -93,7 +92,7 @@ def manhattan(state):
         if tile == 0:
             continue
         row, col = divmod(i, SIZE)
-        g_row, g_col = divmod(i, SIZE)
+        g_row, g_col = divmod(tile, SIZE)
         sum += abs(row - g_row) + abs(col - g_col)
     return sum
 
@@ -104,7 +103,7 @@ def euclidean(state):
         if tile == 0:
             continue
         row, col = divmod(i, SIZE)
-        g_row, g_col = divmod(i, SIZE)
+        g_row, g_col = divmod(tile, SIZE)
         sum += math.sqrt((row - g_row)**2 + (col - g_col)**2)
     return sum
 
