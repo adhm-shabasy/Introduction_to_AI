@@ -1,0 +1,239 @@
+import heapq
+import math
+import time
+import itertools
+from collections import namedtuple
+from dataclasses import dataclass, field
+
+# A state is a flat tuple of 9 ints, row by row. 0 is the blank.
+#   (1,2,5,
+#    3,4,0,      ->  (1, 2, 5, 3, 4, 0, 6, 7, 8)
+#    6,7,8)
+
+GOAL_STATE = (0, 1, 2, 3, 4, 5, 6, 7, 8)
+SIZE = 3
+
+
+GOAL_POS = {tile: divmod(i, SIZE) for i, tile in enumerate(GOAL_STATE)}
+
+
+def is_goal(state):
+    return state == GOAL_STATE
+
+
+def is_solvable(state):
+    tiles = [t for t in state if t != 0]
+    inversions = sum(
+        1 for i in range(len(tiles)) for j in range(i + 1, len(tiles))
+        if tiles[i] > tiles[j]
+    )
+    return inversions % 2 == 0
+
+
+MOVES = {
+    "Up": (-1, 0),
+    "Down": (1, 0),
+    "Left": (0, -1),
+    "Right": (0, 1),
+}
+
+
+def get_neighbors(state):
+    """Return a list of (action, new_state) for every legal move of the blank so we can choose from."""
+    neighbors = []
+    blank = state.index(0)
+    row, col = divmod(blank, SIZE)
+
+    for action, (dr, dc) in MOVES.items():
+        new_row, new_col = row + dr, col + dc
+        if 0 <= new_row < SIZE and 0 <= new_col < SIZE:       
+            target = new_row * SIZE + new_col                  # go back to tuple indexing
+            board = list(state)                                
+            board[blank], board[target] = board[target], board[blank]
+            neighbors.append((action, tuple(board)))
+    return neighbors
+
+
+
+@dataclass
+class Node:
+    state: tuple
+    parent: "Node" = None      
+    action: str = None         # move that produced this node from its parent
+    g: int = 0                 # path cost so far 
+    f: float = 0.0             # g + h 
+
+
+@dataclass
+class SearchResult:
+    path_to_goal: list = field(default_factory=list)   
+    states_on_path: list = field(default_factory=list) 
+    cost_of_path: int = 0
+    nodes_expanded: int = 0
+    search_depth: int = 0      
+    running_time: float = 0.0 
+    solved: bool = False
+
+
+def reconstruct_path(node):
+    actions, states = [], []
+    while node is not None:
+        states.append(node.state)
+        if node.action is not None:
+            actions.append(node.action)
+        node = node.parent
+    actions.reverse()
+    states.reverse()
+    return actions, states
+
+
+def manhattan(state):
+    sum = 0
+    for i, tile in enumerate(state):
+        if tile == 0:
+            continue
+        row, col = divmod(i, SIZE)
+        g_row, g_col = divmod(i, SIZE)
+        sum += abs(row - g_row) + abs(col - g_col)
+    return sum
+
+
+def euclidean(state):
+    sum = 0.0
+    for i, tile in enumerate(state):
+        if tile == 0:
+            continue
+        row, col = divmod(i, SIZE)
+        g_row, g_col = divmod(i, SIZE)
+        sum += math.sqrt((row - g_row)**2 + (col - g_col)**2)
+    return sum
+
+
+
+def a_star(initial_state, heuristic):
+    """A* search. `heuristic` is a function: state -> number (manhattan/euclidean)."""
+    start_time = time.perf_counter()
+    result = SearchResult()
+
+    counter = itertools.count()                      
+    start = Node(initial_state, None, None, 0, heuristic(initial_state))
+    frontier = [(start.f, next(counter), start)]      
+    best_g = {initial_state: 0}                      
+    explored = set()    
+    
+    while frontier:
+        _, _, node = heapq.heappop(frontier)      
+
+        if node.state in explored:                   
+            continue
+        explored.add(node.state)
+
+        result.nodes_expanded += 1
+        result.search_depth = max(result.search_depth, node.g)
+
+        if is_goal(node.state):
+            result.path_to_goal, result.states_on_path = reconstruct_path(node)
+            result.cost_of_path = node.g
+            result.solved = True
+            break
+
+        for action, next_state in get_neighbors(node.state):
+            new_g = node.g + 1                        
+            if next_state not in explored and new_g < best_g.get(next_state, float("inf")):
+                best_g[next_state] = new_g
+                child = Node(next_state, node, action, new_g, new_g + heuristic(next_state))
+                heapq.heappush(frontier, (child.f, next(counter), child))
+
+    result.running_time = time.perf_counter() - start_time
+    return result
+
+
+def print_board(state):
+    border = "+" + "---+" * SIZE
+    print(border)
+    for r in range(SIZE):
+        row = state[r * SIZE:(r + 1) * SIZE]               
+        cells = []
+        for t in row:
+            if t != 0:
+                cells.append(str(t))
+            else:
+                cells.append(" ")   
+        print("| " + " | ".join(cells) + " |")
+        print(border)
+
+
+def print_solution(result, initial_state):
+    if not result.solved:
+        print("No solution found.")
+        return
+
+    print("Path:", " -> ".join(result.path_to_goal))
+    print(f"Cost: {result.cost_of_path} moves\n")
+
+    for step, state in enumerate(result.states_on_path):
+        print("Initial state" if step == 0 else f"Step {step}")
+        print_board(state)    
+
+
+def print_report_header():
+    print(f"{'Algorithm':<14}{'Cost':>6}{'Expanded':>10}{'Depth':>7}{'Time (s)':>11}  Path")
+    print("-" * 80)
+
+
+def print_report_row(name, result):
+    path = ",".join(result.path_to_goal)
+    if len(path) > 40:                                  
+        path = path[:37] + "..."
+    print(f"{name:<14}{result.cost_of_path:>6}{result.nodes_expanded:>10}"
+          f"{result.search_depth:>7}{result.running_time:>11.6f}  {path}")
+    
+
+
+
+#TODO ////////////////////////////////////////////////////////////////YOUSRY///////////////////////////////////////////////////////////////////////////////////////////
+def bfs(initial_state):
+    raise NotImplementedError
+
+
+def dfs(initial_state):
+    raise NotImplementedError
+
+
+def ids(initial_state):
+    raise NotImplementedError
+#/////////////////////////////////////////////////////////////////////YOUSRY///////////////////////////////////////////////////////////////////////////////////////////
+
+
+if __name__ == "__main__":
+    initial = (1, 2, 5, 3, 4, 0, 6, 7, 8)   # example
+
+    if not is_solvable(initial):
+        print("Unsolvable board")
+    else:
+        algorithms = [
+            ("A* Manhattan", lambda s: a_star(s, manhattan)),
+            ("A* Euclidean", lambda s: a_star(s, euclidean)),
+            ("BFS", bfs),
+            ("DFS", dfs),
+            ("IDS", ids),
+        ]
+
+        results = []
+        for name, algo in algorithms:
+            try:
+                result = algo(initial)
+            except NotImplementedError:
+                print(f"{name}: skip\n")
+                continue
+            print("-" * 40)
+            print(f"{name}")
+            print("-" * 40)
+            print_solution(result, initial)
+            print()
+            results.append((name, result))
+
+        print("COMPARISON")
+        print_report_header()
+        for name, result in results:
+            print_report_row(name, result)
