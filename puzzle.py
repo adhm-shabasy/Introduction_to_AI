@@ -13,9 +13,6 @@ GOAL_STATE = (0, 1, 2, 3, 4, 5, 6, 7, 8)
 SIZE = 3
 
 
-GOAL_POS = {tile: divmod(i, SIZE) for i, tile in enumerate(GOAL_STATE)}
-
-
 def is_goal(state):
     return state == GOAL_STATE
 
