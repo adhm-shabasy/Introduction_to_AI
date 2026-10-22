@@ -187,6 +187,23 @@ def print_report_row(name, result):
         path = path[:37] + "..."
     print(f"{name:<14}{result.cost_of_path:>6}{result.nodes_expanded:>10}"
           f"{result.search_depth:>7}{result.running_time:>11.6f}  {path}")
+
+
+def read_initial_state():
+    while True:
+        text = input("Enter the initial state (9 numbers, 0 = blank): ")
+        text = text.replace(",", " ")            
+        try:
+            state = tuple(int(x) for x in text.split())
+        except ValueError:
+            print("Please enter numbers only.\n")
+            continue
+
+        if sorted(state) != list(range(SIZE * SIZE)):
+            print("The board must contain each number from 0 to 8 exactly once.\n")
+            continue
+
+        return state
     
 
 
@@ -206,7 +223,7 @@ def ids(initial_state):
 
 
 if __name__ == "__main__":
-    initial = (1, 2, 5, 3, 4, 0, 6, 7, 8)   # example
+    initial = read_initial_state()
 
     if not is_solvable(initial):
         print("Unsolvable board")
