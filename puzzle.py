@@ -102,9 +102,8 @@ def euclidean(state):
             continue
         row, col = divmod(i, SIZE)
         g_row, g_col = divmod(tile, SIZE)
-        sum += math.sqrt((row - g_row)**2 + (col - g_col)**2)
-    return sum
-
+        sum_val += math.sqrt((row - g_row)**2 + (col - g_col)**2)
+    return sum_val
 
 
 def a_star(initial_state, heuristic):
