@@ -4,7 +4,6 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <title>8-Puzzle Interactive Game</title>
-    <!-- Loads CSS from the static folder -->
     <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
 </head>
 <body>
@@ -26,6 +25,7 @@
         <button id="setBoardBtn" class="primary">Set Board</button>
         <button id="directSolveBtn" class="primary" style="display:none;">Run Benchmarks</button>
     </div>
+    <!-- Red Inline Error -->
     <div class="error" id="error"></div>
 
     <div class="layout">
@@ -45,7 +45,7 @@
                 <button id="giveUpBtn" class="danger">Give Up & Benchmark</button>
             </div>
 
-            <!-- Replayer (Hidden by default) -->
+            <!-- AI Replayer (Hidden by default) -->
             <div id="replayerSection" style="display: none;">
                 <div class="status" id="status"></div>
                 <div class="control-group">
@@ -61,7 +61,10 @@
                     <button data-ms="350" class="on">1x</button>
                     <button data-ms="150">2x</button>
                     <button data-ms="60">5x</button>
+                    <input type="number" id="customSpeed" placeholder="x (max 350)" min="1" max="350">
                 </div>
+                <!-- Red Inline Speed Error -->
+                <div class="speed-error" id="speedError"></div>
             </div>
         </div>
 
@@ -75,16 +78,22 @@
                 </thead>
                 <tbody id="rows"></tbody>
             </table>
-            <div class="path" id="pathBox" hidden></div>
+            
+            <!-- Expandable Path Box -->
+            <div class="path-container" id="pathContainer" hidden>
+                <div class="path-header">
+                    <b id="pathTitle">Path:</b>
+                    <button id="togglePathBtn" class="small-btn" style="display:none;">Reveal Full Path</button>
+                </div>
+                <div class="path-box" id="pathBox"></div>
+            </div>
         </div>
     </div>
 </div>
 
-<!-- Pass the algorithms list from Flask to JavaScript safely -->
 <script>
     const ALGOS = {{ algos|tojson }};
 </script>
-<!-- Loads JS from the static folder -->
 <script src="{{ url_for('static', filename='script.js') }}"></script>
 </body>
 </html>

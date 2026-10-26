@@ -1,12 +1,9 @@
 import random
-
 from flask import Flask, jsonify, render_template, request
-
-import puzzle   # our original file, we don't change anything in it
+import puzzle
 
 app = Flask(__name__)
 
-# key -> (name shown in the UI, function that runs the search)
 ALGORITHMS = {
     "astar_manhattan": ("A* Manhattan", lambda s: puzzle.a_star(s, puzzle.manhattan)),
     "astar_euclidean": ("A* Euclidean", lambda s: puzzle.a_star(s, puzzle.euclidean)),
@@ -17,7 +14,6 @@ ALGORITHMS = {
 
 
 def check_state(state):
-    """Same rules as read_initial_state() in puzzle.py. Returns an error message or None."""
     if not isinstance(state, list) or len(state) != 9:
         return "Enter exactly 9 numbers."
     if sorted(state) != list(range(9)):
@@ -41,7 +37,6 @@ def check():
 
 @app.route("/random")
 def random_board():
-    # shuffle until we get a solvable board
     while True:
         board = list(range(9))
         random.shuffle(board)

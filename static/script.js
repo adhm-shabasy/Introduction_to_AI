@@ -16,6 +16,7 @@ let moves = [];
 let step = 0;
 let playbackTimer = null;
 let playbackDelay = 350;
+let currentRunId = 0;
 
 const boardEl = document.getElementById("board");
 const tiles = {};
@@ -37,6 +38,11 @@ for (let t = 1; t < 9; t++) {
     tiles[t] = tile;
 }
 
+function showError(msg) {
+    const errorBox = document.getElementById("error");
+    errorBox.textContent = msg || "";
+    errorBox.classList.toggle("show", !!msg);
+}
 
 // Game Logic
 function drawBoard(state) {
@@ -104,6 +110,8 @@ function handleGameEnd(status) {
 }
 
 function resetGame() {
+    currentRunId++; // KILLS ANY BACKGROUND AI PROCESSES IMMEDIATELY
+    
     clearInterval(timerInterval);
     userMoves = 0;
     gameActive = true;
@@ -114,7 +122,8 @@ function resetGame() {
     document.getElementById("timerDisplay").textContent = "00:00.0";
     document.getElementById("bannerContainer").innerHTML = "";
     document.getElementById("replayerSection").style.display = "none";
-    document.getElementById("pathBox").hidden = true;
+    document.getElementById("pathContainer").hidden = true;
+    showError("");
     
     results = {};
     selectedAlgo = null;
@@ -133,12 +142,19 @@ async function postData(url, body) {
 }
 
 async function triggerAiSolve() {
+    if (currentMode === 'play' && gameActive) return; 
+
     stopPlayback();
     results = {};
-    renderTable();
+    let myRunId = ++currentRunId; 
+    renderTable(); 
 
     ALGOS.forEach(async algo => {
         let data = await postData("/solve/" + algo.key, { state: initialBoard });
+        
+        // If the user reset the game or switched modes while this was calculating, drop it
+        if (myRunId !== currentRunId) return; 
+        
         results[algo.key] = data;
         
         if (!selectedAlgo) selectAlgorithm(algo.key);
@@ -167,7 +183,12 @@ function renderTable() {
     ALGOS.forEach(algo => {
         let r = results[algo.key];
         if (!r) {
-            rows.innerHTML += `<tr><td>${algo.name}</td><td>...</td><td>...</td><td>...</td><td>running</td></tr>`;
+
+            if (currentMode === 'benchmark' || (currentMode === 'play' && !gameActive)) {
+                rows.innerHTML += `<tr><td>${algo.name}</td><td>...</td><td>...</td><td>...</td><td>running</td></tr>`;
+            } else {
+                rows.innerHTML += `<tr><td>${algo.name}</td><td>...</td><td>...</td><td>...</td><td>...</td></tr>`;
+            }
         } else {
             let activeClass = algo.key === selectedAlgo ? "active row done" : "row done";
             rows.innerHTML += `
@@ -194,11 +215,37 @@ function selectAlgorithm(key) {
     showPlaybackStep(0);
     renderTable();
 
-    let pathText = moves.join(" → ");
-    if (pathText.length > 150) pathText = pathText.slice(0, 147) + "...";
+    // Render Expandable Path Box
+    let fullPath = moves.join(" → ");
+    let isLong = fullPath.length > 150;
+    
+    let pathContainer = document.getElementById("pathContainer");
     let pathBox = document.getElementById("pathBox");
-    pathBox.innerHTML = `<b>Path:</b> ${pathText || "already solved"}`;
-    pathBox.hidden = false;
+    let pathTitle = document.getElementById("pathTitle");
+    let toggleBtn = document.getElementById("togglePathBtn");
+    
+    pathTitle.textContent = `Path (${results[key].name}):`;
+    pathBox.textContent = isLong ? fullPath.slice(0, 147) + "..." : (fullPath || "already solved");
+    
+    if (isLong) {
+        toggleBtn.style.display = "inline-block";
+        toggleBtn.textContent = "Reveal Full Path";
+        toggleBtn.onclick = function() {
+            if (pathBox.classList.contains("expanded")) {
+                pathBox.classList.remove("expanded");
+                pathBox.textContent = fullPath.slice(0, 147) + "...";
+                toggleBtn.textContent = "Reveal Full Path";
+            } else {
+                pathBox.classList.add("expanded");
+                pathBox.textContent = fullPath;
+                toggleBtn.textContent = "Collapse Path";
+            }
+        };
+    } else {
+        toggleBtn.style.display = "none";
+        pathBox.classList.remove("expanded");
+    }
+    pathContainer.hidden = false;
 }
 
 function showPlaybackStep(n) {
@@ -245,8 +292,7 @@ function setMode(mode) {
         document.getElementById("gameControls").style.display = "none";
         document.getElementById("setBoardBtn").style.display = "none";
         document.getElementById("directSolveBtn").style.display = "inline-block";
-        userScore = null;
-        document.getElementById("bannerContainer").innerHTML = "";
+        resetGame(); 
         triggerAiSolve();
     }
 }
@@ -256,11 +302,11 @@ async function setBoardFromInput() {
     let nums = val.replace(/,/g, " ").trim().split(/\s+/).map(Number);
     
     if (nums.length !== 9 || nums.some(n => !Number.isInteger(n))) {
-        return alert("Enter exactly 9 numbers.");
+        return showError("Enter exactly 9 numbers.");
     }
     
     let check = await postData("/check", { state: nums });
-    if (!check.ok) return alert(check.error);
+    if (!check.ok) return showError(check.error);
 
     initialBoard = [...nums];
     resetGame();
@@ -289,12 +335,44 @@ document.getElementById("randomBtn").onclick = async () => {
     setBoardFromInput();
 };
 
-// Speed Adjuster
+// Preset Speed Adjusters
 document.getElementById("speed").querySelectorAll("button").forEach(btn => {
     btn.onclick = () => {
         playbackDelay = Number(btn.dataset.ms);
         document.getElementById("speed").querySelectorAll("button").forEach(b => b.classList.toggle("on", b === btn));
+        document.getElementById("customSpeed").value = "";
+        document.getElementById("speedError").classList.remove("show");
     };
+});
+
+// Custom Speed Modifier Logic (x Multiplier based off 350ms standard)
+const customSpeedInput = document.getElementById("customSpeed");
+const speedError = document.getElementById("speedError");
+
+customSpeedInput.addEventListener("input", (e) => {
+    let val = parseInt(e.target.value);
+    
+    if (isNaN(val) || val <= 0) {
+        speedError.textContent = "Enter a valid multiplier.";
+        speedError.classList.add("show");
+        return;
+    }
+    
+    if (val > 350) {
+        speedError.textContent = "Max limit is 350x (1ms delay).";
+        speedError.classList.add("show");
+        val = 350;
+        e.target.value = 350;
+    } else {
+        speedError.textContent = "";
+        speedError.classList.remove("show");
+    }
+    
+    // Clear highlights from preset buttons
+    document.getElementById("speed").querySelectorAll("button").forEach(b => b.classList.remove("on"));
+    
+    // 350ms is base (1x). So 10x = 35ms delay. Max 350x = 1ms delay.
+    playbackDelay = Math.max(1, Math.floor(350 / val));
 });
 
 // Init

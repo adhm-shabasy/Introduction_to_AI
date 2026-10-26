@@ -116,6 +116,19 @@ button:hover { filter: brightness(1.2); }
 }
 .tile.home { color: var(--blue); border-color: rgba(10, 132, 255, 0.5); }
 
+/* Errors */
+.error, .speed-error {
+    height: 20px;
+    margin: 4px 2px 12px;
+    font-size: 13px;
+    color: var(--red);
+    opacity: 0;
+    transform: translateY(-4px);
+    transition: opacity 150ms ease-out, transform 150ms ease-out;
+}
+.speed-error { margin: 8px 2px 0px; text-align: center; }
+.error.show, .speed-error.show { opacity: 1; transform: translateY(0); }
+
 /* Stats & Controls */
 .stats-bar {
     display: flex;
@@ -169,6 +182,7 @@ input[type="range"] {
     padding: 3px;
     background: var(--field);
     border-radius: 10px;
+    align-items: center;
 }
 .speed button {
     flex: 1;
@@ -180,6 +194,20 @@ input[type="range"] {
     font-size: 13px;
 }
 .speed button.on { background: #48484a; color: var(--text); }
+
+input[type="number"]#customSpeed {
+    width: 85px;
+    height: 30px;
+    padding: 0 6px;
+    background: transparent;
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    color: var(--text);
+    font-size: 13px;
+    text-align: center;
+    outline: none;
+}
+input[type="number"]#customSpeed:focus { border-color: var(--blue); }
 
 /* Table */
 table { width: 100%; border-collapse: separate; border-spacing: 0 4px; font-size: 14px; }
@@ -199,8 +227,27 @@ tr.active td { border-color: var(--blue); border-top: 1px solid var(--blue); bor
 tr.user-row td { background: rgba(48, 209, 88, 0.12); color: var(--green); }
 tr.user-row.gave-up td { background: rgba(255, 69, 58, 0.12); color: var(--red); }
 
-/* Extras */
+/* Extras & Path Box */
 .banner { padding: 14px 16px; border-radius: 12px; margin-bottom: 16px; font-weight: 500; }
 .banner.win { background: rgba(48, 209, 88, 0.18); color: var(--green); }
 .banner.giveup { background: rgba(255, 69, 58, 0.18); color: var(--red); }
-.path { margin-top: 16px; padding: 12px; background: var(--field); border-radius: 12px; font-size: 13px; color: var(--muted); }
+
+.path-container { margin-top: 16px; background: var(--field); border-radius: 12px; padding: 12px; }
+.path-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px; }
+.path-header b { color: var(--text); font-size: 14px; }
+.small-btn { height: 28px; padding: 0 10px; font-size: 12px; border-radius: 6px; background: #3a3a3c; }
+
+.path-box {
+    font-size: 13px;
+    color: var(--muted);
+    word-break: break-word;
+    max-height: 80px;
+    overflow-y: auto;
+    padding-right: 4px;
+    transition: max-height 200ms ease-out;
+}
+.path-box.expanded { max-height: 250px; }
+
+.path-box::-webkit-scrollbar { width: 6px; }
+.path-box::-webkit-scrollbar-track { background: transparent; }
+.path-box::-webkit-scrollbar-thumb { background: #48484a; border-radius: 3px; }
