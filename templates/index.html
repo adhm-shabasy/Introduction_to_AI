@@ -1,0 +1,90 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>8-Puzzle Interactive Game</title>
+    <!-- Loads CSS from the static folder -->
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+</head>
+<body>
+<div class="card">
+    <div class="header-row">
+        <h1>8-Puzzle Game & Benchmark</h1>
+        <div class="segmented-control">
+            <button id="modePlayBtn" class="active">Play Mode</button>
+            <button id="modeBenchBtn">Comparison Mode</button>
+        </div>
+    </div>
+
+    <p class="subtitle" id="subTitle">Try solving the puzzle yourself, or give up to compare against AI algorithms.</p>
+
+    <!-- Inputs -->
+    <div class="input-row">
+        <input type="text" id="stateInput" value="1 2 5 3 4 0 6 7 8" placeholder="9 numbers, 0 = blank" autocomplete="off">
+        <button id="randomBtn">Random Game</button>
+        <button id="setBoardBtn" class="primary">Set Board</button>
+        <button id="directSolveBtn" class="primary" style="display:none;">Run Benchmarks</button>
+    </div>
+    <div class="error" id="error"></div>
+
+    <div class="layout">
+        <!-- Left Side: Board & Controls -->
+        <div class="board-side">
+            <div class="board" id="board"></div>
+
+            <!-- Play Mode Stats -->
+            <div class="stats-bar" id="gameStats">
+                <div>Moves: <strong id="moveCount">0</strong></div>
+                <div>Time: <strong id="timerDisplay">00:00.0</strong></div>
+            </div>
+            
+            <!-- Play Mode Actions -->
+            <div class="control-group" id="gameControls">
+                <button id="resetBtn">Reset</button>
+                <button id="giveUpBtn" class="danger">Give Up & Benchmark</button>
+            </div>
+
+            <!-- Replayer (Hidden by default) -->
+            <div id="replayerSection" style="display: none;">
+                <div class="status" id="status"></div>
+                <div class="control-group">
+                    <button id="firstBtn">⏮</button>
+                    <button id="prevBtn">◀</button>
+                    <button id="playBtn" class="wide">Play</button>
+                    <button id="nextBtn">▶</button>
+                    <button id="lastBtn">⏭</button>
+                </div>
+                <input type="range" id="slider" min="0" max="0" value="0">
+                <div class="speed" id="speed">
+                    <button data-ms="700">0.5x</button>
+                    <button data-ms="350" class="on">1x</button>
+                    <button data-ms="150">2x</button>
+                    <button data-ms="60">5x</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Right Side: Results -->
+        <div class="results-side">
+            <div id="bannerContainer"></div>
+            <h2>Comparison Table</h2>
+            <table>
+                <thead>
+                    <tr><th>Algorithm / Player</th><th>Cost</th><th>Expanded</th><th>Depth</th><th>Time (s)</th></tr>
+                </thead>
+                <tbody id="rows"></tbody>
+            </table>
+            <div class="path" id="pathBox" hidden></div>
+        </div>
+    </div>
+</div>
+
+<!-- Pass the algorithms list from Flask to JavaScript safely -->
+<script>
+    const ALGOS = {{ algos|tojson }};
+</script>
+<!-- Loads JS from the static folder -->
+<script src="{{ url_for('static', filename='script.js') }}"></script>
+</body>
+</html>
